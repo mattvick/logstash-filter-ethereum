@@ -8,36 +8,42 @@ require "logstash/namespace"
 # It is only intended to be used as an .
 class LogStash::Filters::Ethereum < LogStash::Filters::Base
 
+  require 'logstash/filters/decoder/decoder'
+
   # Setting the config_name here is required. This is how you
   # configure this filter from your Logstash config.
   #
   # filter {
-  #    {
-  #     message => "My message..."
+  #   ethereum {
+  #     decode => { "fieldname" => "int" }
   #   }
   # }
   #
   config_name "ethereum"
   
-  # Replace the message with this value.
-  config :message, :validate => :string, :default => "Hello World!"
+  config :decode, :validate => :hash
   
 
   public
   def register
-    # Add instance variables 
+    @decoder = Decoder.new
   end # def register
 
   public
   def filter(event)
 
-    if @message
-      # Replace the event message with our message as configured in the
-      # config file.
-      event.set("message", @message)
-    end
+    decode(event) if @decode
 
     # filter_matched should go in the last line of our successful code
     filter_matched(event)
   end # def filter
+
+  def decode(event)
+    @decode.each do |field, type|
+      next unless event.include?(field)
+
+      event.set(field, @decoder.decode(type, field))
+    end
+  end
+
 end # class LogStash::Filters::Ethereum
